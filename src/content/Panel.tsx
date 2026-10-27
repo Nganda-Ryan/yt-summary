@@ -1,14 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchTranscript, type Segment, type TranscriptSource } from "../lib/transcript";
-import { formatClock, toMarkdown, toPlainText, toSrt, toSummaryPlainText } from "../lib/format";
+import {
+  formatClock,
+  highlightQuery,
+  matchQuery,
+  toMarkdown,
+  toPlainText,
+  toSrt,
+  toSummaryPlainText,
+} from "../lib/format";
 import { documentToPdf } from "../lib/pdf";
-import type { SummarySection } from "../lib/summary";
+import {
+  VIDEO_KIND_LABELS,
+  type SummarySection,
+  type VideoKind,
+} from "../lib/summary";
 
 type Status = "idle" | "loading" | "ready" | "error";
 type SummaryStatus = "idle" | "loading" | "error";
 
 interface SummarizeResponse {
   ok?: boolean;
+  kind?: VideoKind;
+  essence?: string;
   sections?: SummarySection[];
   error?: string;
 }
@@ -49,6 +63,23 @@ function watchIdFromEvent(event?: Event): string | undefined {
   return undefined;
 }
 
+function HighlightedText({ text, query }: { text: string; query: string }) {
+  const parts = highlightQuery(text, query);
+  return (
+    <>
+      {parts.map((part, index) =>
+        part.match ? (
+          <mark key={index} className="ytp-mark">
+            {part.text}
+          </mark>
+        ) : (
+          <span key={index}>{part.text}</span>
+        ),
+      )}
+    </>
+  );
+}
+
 export default function Panel() {
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLElement>(null);
@@ -62,12 +93,15 @@ export default function Panel() {
   const [segments, setSegments] = useState<Segment[]>([]);
   const [source, setSource] = useState<TranscriptSource | null>(null);
   const [summary, setSummary] = useState<SummarySection[]>([]);
+  const [essence, setEssence] = useState("");
+  const [summaryKind, setSummaryKind] = useState<VideoKind | null>(null);
   const [summaryStatus, setSummaryStatus] = useState<SummaryStatus>("idle");
   const [summaryError, setSummaryError] = useState("");
   const [hasKey, setHasKey] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
   const [flash, setFlash] = useState("");
+  const [query, setQuery] = useState("");
 
   const showFlash = useCallback((message: string) => {
     setFlash(message);
@@ -83,9 +117,12 @@ export default function Panel() {
     setSegments([]);
     setSource(null);
     setSummary([]);
+    setEssence("");
+    setSummaryKind(null);
     setSummaryStatus("idle");
     setSummaryError("");
     setCurrentTime(0);
+    setQuery("");
     try {
       const transcript = await fetchTranscript(id);
       if (requestRef.current !== token) return;
@@ -109,6 +146,9 @@ export default function Panel() {
       setSegments([]);
       setStatus("idle");
       setSummary([]);
+      setEssence("");
+      setSummaryKind(null);
+      setQuery("");
       return;
     }
     if (id !== videoIdRef.current) {
@@ -173,6 +213,8 @@ export default function Panel() {
     };
   }, [videoId]);
 
+  const searching = query.trim().length > 0;
+
   const activeIndex = useMemo(() => {
     let index = -1;
     for (let i = 0; i < segments.length; i += 1) {
@@ -194,8 +236,21 @@ export default function Panel() {
   const ready = status === "ready" && segments.length > 0;
   const summaryMode = ready && summary.length > 0;
 
+  const visibleSegments = useMemo(() => {
+    return segments.flatMap((segment, index) =>
+      matchQuery(segment.text, query) ? [{ segment, index }] : [],
+    );
+  }, [segments, query]);
+
+  const visibleSections = useMemo(() => {
+    return summary.flatMap((section, index) =>
+      matchQuery(`${section.title} ${section.summary}`, query) ? [{ section, index }] : [],
+    );
+  }, [summary, query]);
+
   /* Garde le segment ou l'idée courant visible, comme les paroles sur Spotify. */
   useEffect(() => {
+    if (searching) return;
     const container = listRef.current;
     const index = summaryMode ? activeSummaryIndex : activeIndex;
     if (!container || index < 0) return;
@@ -203,7 +258,7 @@ export default function Panel() {
     if (!row) return;
     const target = row.offsetTop - container.clientHeight / 2 + row.offsetHeight / 2;
     container.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
-  }, [activeIndex, activeSummaryIndex, summaryMode]);
+  }, [activeIndex, activeSummaryIndex, summaryMode, searching]);
 
   const goTo = useCallback((seconds: number) => {
     const video = document.querySelector<HTMLVideoElement>("video");
@@ -222,10 +277,12 @@ export default function Panel() {
     const video = document.querySelector<HTMLVideoElement>("video");
     const last = segments[segments.length - 1];
     const duration = video && Number.isFinite(video.duration) ? video.duration : last.start + last.duration;
+    const pageTitle = document.title.replace(/\s*-\s*YouTube$/, "");
     try {
       const response = await chrome.runtime.sendMessage({
         type: "summarize",
         duration,
+        title: pageTitle,
         segments: segments.map((segment) => ({ start: segment.start, text: segment.text })),
       }) as SummarizeResponse | undefined;
       if (!response) {
@@ -239,6 +296,8 @@ export default function Panel() {
         return;
       }
       setSummary(response.sections);
+      setEssence(response.essence?.trim() ?? "");
+      setSummaryKind(response.kind && VIDEO_KIND_LABELS[response.kind] ? response.kind : null);
       setSummaryStatus("idle");
     } catch (cause) {
       setSummaryStatus("error");
@@ -278,12 +337,12 @@ export default function Panel() {
 
   const copySummary = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(toSummaryPlainText(summary));
+      await navigator.clipboard.writeText(toSummaryPlainText(summary, essence));
       showFlash("Résumé copié");
     } catch {
       showFlash("Copie impossible");
     }
-  }, [summary, showFlash]);
+  }, [summary, essence, showFlash]);
 
   const openOptions = useCallback(() => {
     chrome.runtime
@@ -291,7 +350,14 @@ export default function Panel() {
       .catch(() => showFlash("Impossible d'ouvrir les options"));
   }, [showFlash]);
 
+  const closeSummary = useCallback(() => {
+    setSummary([]);
+    setEssence("");
+    setSummaryKind(null);
+  }, []);
+
   const title = document.title.replace(/\s*-\s*YouTube$/, "");
+  const hitCount = summaryMode ? visibleSections.length : visibleSegments.length;
 
   /* Hors d'une page /watch, le panneau disparaît complètement. */
   if (!videoId) return null;
@@ -305,7 +371,7 @@ export default function Panel() {
           </span>
           <span className="ytp-meta">
             {summaryMode
-              ? `${summary.length} idées`
+              ? `${summary.length} ${summaryKind ? VIDEO_KIND_LABELS[summaryKind].toLowerCase() : "idées"}`
               : ready
                 ? `${segments.length} segments · ${source ? SOURCE_LABELS[source] : ""}`
                 : "Transcription"}
@@ -323,6 +389,24 @@ export default function Panel() {
 
       {!collapsed && (
         <div className="ytp-body">
+          {ready && (
+            <div className="ytp-search">
+              <input
+                type="search"
+                className="ytp-search-input"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={summaryMode ? "Rechercher dans le résumé…" : "Rechercher dans les sous-titres…"}
+                aria-label={summaryMode ? "Rechercher dans le résumé" : "Rechercher dans les sous-titres"}
+              />
+              {searching && (
+                <span className="ytp-search-count">
+                  {hitCount} résultat{hitCount === 1 ? "" : "s"}
+                </span>
+              )}
+            </div>
+          )}
+
           {status === "loading" && <p className="ytp-status">Chargement de la transcription…</p>}
 
           {status === "error" && (
@@ -339,49 +423,66 @@ export default function Panel() {
           {summaryMode && (
             <section className="ytp-summary">
               <div className="ytp-summary-head">
-                <h2>Résumé par idées</h2>
+                <h2>
+                  {summaryKind ? VIDEO_KIND_LABELS[summaryKind] : "Résumé"}
+                </h2>
                 <button
                   type="button"
                   className="ytp-icon-btn"
                   title="Revenir à la transcription"
-                  onClick={() => setSummary([])}
+                  onClick={closeSummary}
                 >
                   ×
                 </button>
               </div>
-              <ul className="ytp-summary-list" ref={(node) => { listRef.current = node; }}>
-                {summary.map((section, index) => (
-                  <li key={`${section.start}-${index}`} data-index={index}>
-                    <button
-                      type="button"
-                      className={index === activeSummaryIndex ? "ytp-section is-active" : "ytp-section"}
-                      onClick={() => goTo(section.start)}
-                    >
-                      <span className="ytp-section-time">[{formatClock(section.start)}]</span>
-                      <strong className="ytp-section-title">{section.title}</strong>
-                      <span className="ytp-section-summary">{section.summary}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              {essence && !searching && <p className="ytp-essence">{essence}</p>}
+              {searching && visibleSections.length === 0 ? (
+                <p className="ytp-empty">Aucun résultat</p>
+              ) : (
+                <ul className="ytp-summary-list" ref={(node) => { listRef.current = node; }}>
+                  {visibleSections.map(({ section, index }) => (
+                    <li key={`${section.start}-${index}`} data-index={index}>
+                      <button
+                        type="button"
+                        className={index === activeSummaryIndex ? "ytp-section is-active" : "ytp-section"}
+                        onClick={() => goTo(section.start)}
+                      >
+                        <span className="ytp-section-time">[{formatClock(section.start)}]</span>
+                        <strong className="ytp-section-title">
+                          <HighlightedText text={section.title} query={query} />
+                        </strong>
+                        <span className="ytp-section-summary">
+                          <HighlightedText text={section.summary} query={query} />
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
           )}
 
           {ready && !summaryMode && (
-            <div className="ytp-list" ref={(node) => { listRef.current = node; }}>
-              {segments.map((segment, index) => (
-                <button
-                  type="button"
-                  key={`${segment.start}-${index}`}
-                  data-index={index}
-                  className={index === activeIndex ? "ytp-seg is-active" : "ytp-seg"}
-                  onClick={() => goTo(segment.start)}
-                >
-                  <span className="ytp-time">{formatClock(segment.start)}</span>
-                  <span className="ytp-text">{segment.text}</span>
-                </button>
-              ))}
-            </div>
+            searching && visibleSegments.length === 0 ? (
+              <p className="ytp-empty">Aucun résultat</p>
+            ) : (
+              <div className="ytp-list" ref={(node) => { listRef.current = node; }}>
+                {visibleSegments.map(({ segment, index }) => (
+                  <button
+                    type="button"
+                    key={`${segment.start}-${index}`}
+                    data-index={index}
+                    className={index === activeIndex ? "ytp-seg is-active" : "ytp-seg"}
+                    onClick={() => goTo(segment.start)}
+                  >
+                    <span className="ytp-time">{formatClock(segment.start)}</span>
+                    <span className="ytp-text">
+                      <HighlightedText text={segment.text} query={query} />
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )
           )}
 
           <footer className="ytp-footer">
@@ -404,7 +505,8 @@ export default function Panel() {
                         documentToPdf({
                           title,
                           videoId,
-                          heading: "Résumé par idées",
+                          heading: summaryKind ? `Résumé · ${VIDEO_KIND_LABELS[summaryKind]}` : "Résumé par idées",
+                          essence,
                           items: summary.map((section) => ({
                             start: section.start,
                             title: section.title,
@@ -428,6 +530,7 @@ export default function Panel() {
                           videoId,
                           segments,
                           sections: summary,
+                          essence,
                           includeTranscript: false,
                         }),
                       )
@@ -491,7 +594,7 @@ export default function Panel() {
                     onClick={() =>
                       download(
                         `transcript-${videoId}.md`,
-                        toMarkdown({ title, videoId, segments, sections: summary }),
+                        toMarkdown({ title, videoId, segments, sections: summary, essence }),
                       )
                     }
                   >

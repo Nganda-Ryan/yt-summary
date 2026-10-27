@@ -5,7 +5,7 @@ import {
   buildTranscriptLines,
   formatLines,
   parseSummary,
-  type SummarySection,
+  type SummaryResult,
 } from "./lib/summary";
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
@@ -29,12 +29,12 @@ interface RequestSegment {
 type IncomingMessage =
   | { type: "hasKey" }
   | { type: "openOptions" }
-  | { type: "summarize"; duration: number; segments: RequestSegment[] };
+  | { type: "summarize"; duration: number; segments: RequestSegment[]; title?: string };
 
 type ResponsePayload =
   | { ok: true }
   | { ok: true; hasKey: boolean }
-  | { ok: true; sections: SummarySection[] }
+  | { ok: true; kind: SummaryResult["kind"]; essence: string; sections: SummaryResult["sections"] }
   | { ok: false; code?: "no_key" | "too_long"; error: string };
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
@@ -120,7 +120,8 @@ async function summarize(message: Extract<IncomingMessage, { type: "summarize" }
   }
 
   const lines = buildTranscriptLines(segments, bucketSeconds(message.duration));
-  const prompt = buildPrompt(formatLines(lines), "français");
+  const title = typeof message.title === "string" ? message.title : "";
+  const prompt = buildPrompt(formatLines(lines), "français", { title });
 
   const result =
     config.provider === "gemini"
@@ -130,14 +131,15 @@ async function summarize(message: Extract<IncomingMessage, { type: "summarize" }
 
   if (!result.text.trim()) return { ok: false, error: "Réponse vide du modèle." };
 
-  const anchors = segments.map((segment) => segment.start);
-  return { ok: true, sections: parseSummary(result.text, anchors) };
+  const parsed = parseSummary(result.text, segments);
+  return { ok: true, kind: parsed.kind, essence: parsed.essence, sections: parsed.sections };
 }
 
 function bucketSeconds(duration: number): number {
-  if (duration > 45 * 60) return 45;
-  if (duration > 20 * 60) return 30;
-  return 15;
+  if (duration > 60 * 60) return 20;
+  if (duration > 30 * 60) return 12;
+  if (duration > 12 * 60) return 8;
+  return 5;
 }
 
 async function fetchWithTimeout(

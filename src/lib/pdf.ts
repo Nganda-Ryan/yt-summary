@@ -28,6 +28,7 @@ export interface PdfDocument {
   title: string;
   videoId: string;
   heading: string;
+  essence?: string;
   items: PdfItem[];
 }
 
@@ -268,6 +269,22 @@ function layoutDocument(doc: PdfDocument): PageModel[] {
     color: INK,
   });
   y -= HEADING_SIZE + 14;
+
+  const essence = doc.essence?.trim() ?? "";
+  if (essence) {
+    const essenceLines = wrapWords(
+      essence.split(/\s+/).map((word) => ({ word, face: "regular" as const, size: BODY_SIZE, color: MUTED })),
+      CONTENT_WIDTH,
+      CONTENT_WIDTH,
+    );
+    for (const line of essenceLines) {
+      ensure(BODY_LEADING);
+      let x = MARGIN;
+      for (const run of line) x += drawText(page, x, y, run);
+      y -= BODY_LEADING;
+    }
+    y -= 12;
+  }
 
   for (const item of doc.items) {
     const stamp = `[${formatClock(item.start)}]`;

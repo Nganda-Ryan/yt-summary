@@ -69,6 +69,66 @@
   min-height: 0;
 }
 
+.ytp-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ytp-search-input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  color: #f1f1f1;
+  font: inherit;
+  font-size: 12px;
+}
+
+.ytp-search-input::placeholder {
+  color: #888888;
+}
+
+.ytp-search-input:focus {
+  outline: none;
+  border-color: #3ea6ff;
+}
+
+.ytp-search-count {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #aaaaaa;
+  white-space: nowrap;
+}
+
+.ytp-mark {
+  padding: 0 1px;
+  background: rgba(255, 214, 0, 0.45);
+  color: inherit;
+  border-radius: 2px;
+}
+
+.ytp-empty {
+  margin: 0;
+  padding: 16px 12px;
+  color: #aaaaaa;
+  font-size: 12px;
+}
+
+.ytp-essence {
+  margin: 0 12px 8px;
+  padding: 8px 10px;
+  background: rgba(62, 166, 255, 0.1);
+  border-radius: 8px;
+  color: #dddddd;
+  font-size: 12px;
+}
+
 .ytp-status,
 .ytp-error,
 .ytp-hint {
