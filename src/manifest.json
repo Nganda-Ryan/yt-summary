@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Transcript Panel",
+  "version": "0.1.0",
+  "description": "Transcription horodatée injectée dans YouTube : clic vers la vidéo, exports .pdf/.srt/.md et résumé par idées avec Claude ou Gemini.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://api.anthropic.com/*",
+    "https://generativelanguage.googleapis.com/*"
+  ],
+  "background": { "service_worker": "src/background.ts", "type": "module" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["src/content/index.tsx"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "src/options/index.html"
+}

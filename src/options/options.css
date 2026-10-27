@@ -1,0 +1,106 @@
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: #0f0f0f;
+  color: #f1f1f1;
+  font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+h1 {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+h2 {
+  margin-top: 32px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+p {
+  color: #cccccc;
+}
+
+code {
+  padding: 1px 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+label {
+  width: 100%;
+  font-size: 13px;
+  color: #aaaaaa;
+}
+
+input,
+select {
+  flex: 1;
+  min-width: 260px;
+  padding: 9px 12px;
+  background: #181818;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #f1f1f1;
+  font: inherit;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #3ea6ff;
+}
+
+.help {
+  margin-top: 14px;
+  font-size: 13px;
+}
+
+.help a {
+  color: #3ea6ff;
+}
+
+button {
+  padding: 9px 18px;
+  background: #3ea6ff;
+  border: none;
+  border-radius: 18px;
+  color: #0f0f0f;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #65b8ff;
+}
+
+.stored {
+  font-size: 13px;
+  color: #7ee787;
+}
+
+.message {
+  font-size: 13px;
+  color: #3ea6ff;
+}

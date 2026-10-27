@@ -1,0 +1,318 @@
+/* Le Shadow DOM isole ces styles de ceux de YouTube.
+   On neutralise d'abord les propriétés héritées qui traversent la frontière. */
+:host {
+  font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #f1f1f1;
+  direction: ltr;
+  text-align: left;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ytp-panel,
+.ytp-panel * {
+  box-sizing: border-box;
+}
+
+.ytp-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: calc(100vh - 90px);
+  margin: 0;
+  overflow: hidden;
+  background: #0f0f0f;
+  color: #f1f1f1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* --- en-tête --- */
+.ytp-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 12px;
+  background: #181818;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ytp-heading {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.ytp-title {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ytp-meta {
+  font-size: 11px;
+  color: #aaaaaa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- corps --- */
+.ytp-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ytp-status,
+.ytp-error,
+.ytp-hint {
+  margin: 0;
+  padding: 12px;
+  color: #aaaaaa;
+  font-size: 12px;
+}
+
+.ytp-error p,
+.ytp-error-text {
+  margin: 0 0 8px;
+  color: #ff7b72;
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.ytp-error-text {
+  padding: 0 12px 8px;
+  margin: 0;
+}
+
+.ytp-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #3ea6ff;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* --- liste des segments --- */
+.ytp-list {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: 50vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.ytp-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.ytp-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+}
+
+.ytp-seg {
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ytp-seg:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ytp-seg.is-active {
+  background: rgba(62, 166, 255, 0.14);
+  border-left-color: #3ea6ff;
+}
+
+.ytp-time {
+  color: #3ea6ff;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+
+.ytp-seg.is-active .ytp-time {
+  color: #7cc4ff;
+}
+
+.ytp-text {
+  color: #dddddd;
+}
+
+/* --- résumé --- */
+.ytp-summary {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+  background: #161616;
+}
+
+.ytp-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px 4px 12px;
+}
+
+.ytp-summary-head h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #aaaaaa;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ytp-summary-list {
+  margin: 0;
+  padding: 0 8px 8px;
+  list-style: none;
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: 50vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.ytp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ytp-section + .ytp-section,
+.ytp-summary-list li + li {
+  margin-top: 6px;
+}
+
+.ytp-section:hover {
+  background: rgba(62, 166, 255, 0.12);
+  border-color: rgba(62, 166, 255, 0.4);
+}
+
+.ytp-section.is-active {
+  background: rgba(62, 166, 255, 0.14);
+  border-color: rgba(62, 166, 255, 0.5);
+}
+
+.ytp-section-time {
+  color: #3ea6ff;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ytp-section-title {
+  font-size: 13px;
+}
+
+.ytp-section-summary {
+  color: #bbbbbb;
+  font-size: 12px;
+}
+
+/* --- pied de panneau --- */
+.ytp-footer {
+  padding: 8px 12px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #181818;
+}
+
+.ytp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ytp-btn,
+.ytp-icon-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  color: #f1f1f1;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ytp-btn {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+.ytp-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.ytp-btn-primary {
+  background: #3ea6ff;
+  border-color: #3ea6ff;
+  color: #0f0f0f;
+  font-weight: 600;
+}
+
+.ytp-btn-primary:hover:not(:disabled) {
+  background: #65b8ff;
+}
+
+.ytp-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ytp-icon-btn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.ytp-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.ytp-hint,
+.ytp-flash {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #aaaaaa;
+}
+
+.ytp-flash {
+  color: #7ee787;
+}
